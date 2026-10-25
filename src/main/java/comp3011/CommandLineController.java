@@ -158,7 +158,13 @@ public class CommandLineController {
                 frameProcessors.add(
                         new FrameYellower()
                 );
-                
+             
+            } else if ("-v".equals(arg) ||
+                    "--vignette-frames".equals(arg)) {
+
+                frameProcessors.add(
+                        new FrameVignetter()
+                );
 
             } else if (arg.startsWith("-")) {
 
