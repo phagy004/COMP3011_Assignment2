@@ -38,7 +38,6 @@ public class CommandLineController {
             new ArrayList<>();
 
     public CommandLineController(String[] args) {
-
         this.args = args.clone();
 
         parse();
@@ -53,42 +52,34 @@ public class CommandLineController {
     }
 
     public File getVideoFile() {
-
         return videoFile;
     }
 
     public String getErrorMessage() {
-
         return errorMessage;
     }
 
     public int getExitCode() {
-
         return errorMessage == null ? 0 : 1;
     }
 
     public Integer getDisplayId() {
-
         return displayId;
     }
 
     public boolean isAudioRequested() {
-
         return audioRequested;
     }
 
     public boolean isMaximiseRequested() {
-
         return maximiseRequested;
     }
 
     public List<FrameProcessor> getFrameProcessors() {
-
         return frameProcessors;
     }
 
     public boolean shouldLaunchApplication() {
-
         return errorMessage == null &&
                 videoFile != null;
     }
@@ -128,78 +119,61 @@ public class CommandLineController {
             } else if ("-n".equals(arg) ||
                     "--number-frames".equals(arg)) {
 
-                frameProcessors.add(
-                        new FrameNumberer()
-                );
+                addFrameProcessor('n');
+
             } else if ("-s".equals(arg) ||
                     "--scratch-frames".equals(arg)) {
 
-                frameProcessors.add(
-                        new FrameScratcher()
-                );   
-                
+                addFrameProcessor('s');
+
             } else if ("-f".equals(arg) ||
                     "--flicker-frames".equals(arg)) {
 
-                frameProcessors.add(
-                        new FrameFlickerer()
-                );
-                
+                addFrameProcessor('f');
+
             } else if ("-w".equals(arg) ||
                     "--black-and-white".equals(arg)) {
 
-                frameProcessors.add(
-                        new FrameBlackAndWhiter()
-                );
-                
+                addFrameProcessor('w');
+
             } else if ("-y".equals(arg) ||
                     "--yellow-frames".equals(arg)) {
 
-                frameProcessors.add(
-                        new FrameYellower()
-                );
-             
+                addFrameProcessor('y');
+
             } else if ("-v".equals(arg) ||
                     "--vignette-frames".equals(arg)) {
 
-                frameProcessors.add(
-                        new FrameVignetter()
-                );
-                
+                addFrameProcessor('v');
+
             } else if ("-d".equals(arg) ||
                     "--dust-frames".equals(arg)) {
 
-                frameProcessors.add(
-                        new FrameDuster()
-                );
-                
+                addFrameProcessor('d');
+
             } else if ("-j".equals(arg) ||
                     "--jitter-frames".equals(arg)) {
 
-                frameProcessors.add(
-                        new FrameJitterer()
-                );
-                
+                addFrameProcessor('j');
+
             } else if ("-m".equals(arg) ||
                     "--mottle-frames".equals(arg)) {
 
-                frameProcessors.add(
-                        new FrameMottler()
-                );
-                
+                addFrameProcessor('m');
+
             } else if ("-b".equals(arg) ||
                     "--bleed-frames".equals(arg)) {
 
-                frameProcessors.add(
-                        new FrameBleeder()
-                );
-                
+                addFrameProcessor('b');
+
             } else if ("-p".equals(arg) ||
                     "--pepper-frames".equals(arg)) {
 
-                frameProcessors.add(
-                        new FramePepperer()
-                );
+                addFrameProcessor('p');
+
+            } else if (parseStackedFrameProcessors(arg)) {
+
+                //stacked frame processors were added
 
             } else if (arg.startsWith("-")) {
 
@@ -221,9 +195,7 @@ public class CommandLineController {
         } else if (videoFiles.size() == 1) {
 
             videoFile =
-                    new File(
-                            videoFiles.get(0)
-                    );
+                    new File(videoFiles.get(0));
 
             if (!videoFile.isFile()) {
 
@@ -241,6 +213,114 @@ public class CommandLineController {
                 errorMessage =
                         "No video file specified.";
             }
+        }
+    }
+
+    private boolean parseStackedFrameProcessors(String arg) {
+
+        if (!arg.startsWith("-") ||
+                arg.startsWith("--") ||
+                arg.length() <= 2) {
+
+            return false;
+        }
+
+        String validOptions =
+                "nsfwyvdjmbp";
+
+        for (int i = 1; i < arg.length(); i++) {
+
+            char option =
+                    arg.charAt(i);
+
+            if (validOptions.indexOf(option) == -1) {
+
+                return false;
+            }
+        }
+
+        for (int i = 1; i < arg.length(); i++) {
+
+            addFrameProcessor(
+                    arg.charAt(i)
+            );
+        }
+
+        return true;
+    }
+
+    private void addFrameProcessor(char option) {
+
+        switch (option) {
+
+            case 'n':
+                frameProcessors.add(
+                        new FrameNumberer()
+                );
+                break;
+
+            case 's':
+                frameProcessors.add(
+                        new FrameScratcher()
+                );
+                break;
+
+            case 'f':
+                frameProcessors.add(
+                        new FrameFlickerer()
+                );
+                break;
+
+            case 'w':
+                frameProcessors.add(
+                        new FrameBlackAndWhiter()
+                );
+                break;
+
+            case 'y':
+                frameProcessors.add(
+                        new FrameYellower()
+                );
+                break;
+
+            case 'v':
+                frameProcessors.add(
+                        new FrameVignetter()
+                );
+                break;
+
+            case 'd':
+                frameProcessors.add(
+                        new FrameDuster()
+                );
+                break;
+
+            case 'j':
+                frameProcessors.add(
+                        new FrameJitterer()
+                );
+                break;
+
+            case 'm':
+                frameProcessors.add(
+                        new FrameMottler()
+                );
+                break;
+
+            case 'b':
+                frameProcessors.add(
+                        new FrameBleeder()
+                );
+                break;
+
+            case 'p':
+                frameProcessors.add(
+                        new FramePepperer()
+                );
+                break;
+
+            default:
+                break;
         }
     }
 
