@@ -137,6 +137,13 @@ public class CommandLineController {
                 frameProcessors.add(
                         new FrameScratcher()
                 );   
+                
+            } else if ("-f".equals(arg) ||
+                    "--flicker-frames".equals(arg)) {
+
+                frameProcessors.add(
+                        new FrameFlickerer()
+                );
 
             } else if (arg.startsWith("-")) {
 
