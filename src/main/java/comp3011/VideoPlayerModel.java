@@ -42,6 +42,7 @@ public class VideoPlayerModel {
     private static final long NO_SEEK_REQUEST = -1;
     private static final long FIVE_SECONDS_US = 5_000_000L;
     private static final long AUDIO_LEAD_NS = 30_000_000L;
+    private static final int MAX_FRAMES_IN_FLIGHT = 8;
 
     private final List<FrameProcessor> frameProcessors;
     private final FrameProcessingPipeline processingPipeline;
@@ -89,6 +90,8 @@ public class VideoPlayerModel {
     private long playbackStartNs;
     private long pauseStartedNs;
     private long relativeSeekBaseUs = NO_SEEK_REQUEST;
+    private int framesInFlight;
+    private boolean inputFinished;
 
     public VideoPlayerModel(
             boolean audioEnabled,
@@ -204,36 +207,18 @@ public class VideoPlayerModel {
     }
 
     private void seekTo(long timestampUs) {
+
         long logicalTimestampUs =
                 clampSeekTimestamp(timestampUs);
 
         long grabTimestampUs =
                 displayableSeekTimestamp(logicalTimestampUs);
 
-        if (!playbackOpen) {
-            startPlayback(
-                    grabTimestampUs,
-                    pauseRequested,
-                    logicalTimestampUs
-            );
-
-            return;
-        }
-
-        try {
-            grabber.setTimestamp(grabTimestampUs);
-
-            resetPlaybackClock(logicalTimestampUs);
-
-            flushAudioOutput();
-
-            prepareNextFrame();
-
-            notifyPlaybackStateChanged();
-
-        } catch (Exception e) {
-            handlePlaybackError(e);
-        }
+        startPlayback(
+                grabTimestampUs,
+                pauseRequested,
+                logicalTimestampUs
+        );
     }
 
     private void startPlayback(
@@ -372,6 +357,9 @@ public class VideoPlayerModel {
                 pauseRequested
                         ? System.nanoTime()
                         : 0;
+        
+        framesInFlight = 0;
+        inputFinished = false;
     }
 
     private void resumePlaybackClock(long now) {
@@ -386,33 +374,54 @@ public class VideoPlayerModel {
     }
 
     private void prepareNextFrame() {
-        if (!playbackOpen ||
-                preparedFrame != null) {
 
+        if (!playbackOpen) {
             return;
         }
 
         try {
-            preparedFrame =
-                    readNextVideoFrame();
+
+            if (preparedFrame == null) {
+                collectProcessedFrame();
+            }
+
+            if (!pauseRequested &&
+                    !inputFinished &&
+                    framesInFlight < MAX_FRAMES_IN_FLIGHT) {
+
+                submitNextFrame();
+            }
+
+            if (preparedFrame == null) {
+                collectProcessedFrame();
+            }
+
+            if (inputFinished &&
+                    framesInFlight == 0 &&
+                    preparedFrame == null) {
+
+                finishPlayback();
+            }
 
         } catch (Exception e) {
+
             handlePlaybackError(e);
         }
     }
 
-    private PreparedFrame readNextVideoFrame()
+    private void submitNextFrame()
             throws Exception {
 
-        while (playbackOpen) {
+        while (playbackOpen &&
+                !inputFinished) {
 
             Frame frame =
                     grabFrame();
 
             if (frame == null) {
-                finishPlayback();
 
-                return null;
+                inputFinished = true;
+                return;
             }
 
             long timestampUs =
@@ -430,8 +439,7 @@ public class VideoPlayerModel {
             if (frame.image == null) {
                 continue;
             }
-            
-            
+
             if (!frameProcessorsInitialised) {
 
                 processingPipeline.start(
@@ -459,14 +467,6 @@ public class VideoPlayerModel {
 
                 firstTimestampUs =
                         timestampUs;
-
-                playbackStartNs =
-                        System.nanoTime();
-
-                if (pauseRequested) {
-                    pauseStartedNs =
-                            playbackStartNs;
-                }
             }
 
             int frameNumber =
@@ -478,7 +478,7 @@ public class VideoPlayerModel {
                             timestampUs
                     );
 
-            //clone the frame because the grabber may reuse frame data
+            //clone because the decoder can reuse frame data
             Frame frameCopy =
                     frame.clone();
 
@@ -487,43 +487,78 @@ public class VideoPlayerModel {
                     info
             );
 
-            FrameProcessingPipeline.FrameJob job =
-                    processingPipeline.takeProcessedFrame();
+            framesInFlight++;
 
-            if (job.getError() != null) {
-                throw job.getError();
-            }
+            return;
+        }
+    }
 
-            Image image =
-                    converter.convert(
-                            job.getFrame()
-                    );
+    private void collectProcessedFrame()
+            throws Exception {
 
-            long relativeTimestampUs =
-                    Math.max(
-                            0,
-                            timestampUs - firstTimestampUs
-                    );
+        if (!frameProcessorsInitialised ||
+                preparedFrame != null) {
 
-            long logicalTimestampUs =
-                    logicalPlaybackBaseUs
-                    + relativeTimestampUs;
-
-            long targetTimeNs =
-                    playbackStartNs
-                    + relativeTimestampUs * 1_000L;
-
-            return new PreparedFrame(
-                    image,
-                    frameNumber,
-                    timestampUs,
-                    logicalTimestampUs,
-                    targetTimeNs,
-                    System.nanoTime()
-            );
+            return;
         }
 
-        return null;
+        FrameProcessingPipeline.FrameJob job =
+                processingPipeline.pollProcessedFrame();
+
+        if (job == null) {
+            return;
+        }
+
+        framesInFlight--;
+
+        if (job.getError() != null) {
+            throw job.getError();
+        }
+
+        if (playbackStartNs == 0) {
+
+            playbackStartNs =
+                    System.nanoTime();
+
+            if (pauseRequested) {
+                pauseStartedNs =
+                        playbackStartNs;
+            }
+        }
+
+        Frame frame =
+                job.getFrame();
+
+        InfoFrame info =
+                job.getInfo();
+
+        Image image =
+                converter.convert(frame);
+
+        long relativeTimestampUs =
+                Math.max(
+                        0,
+                        info.timestampUs()
+                        - firstTimestampUs
+                );
+
+        long logicalTimestampUs =
+                logicalPlaybackBaseUs
+                + relativeTimestampUs;
+
+        long targetTimeNs =
+                playbackStartNs
+                + relativeTimestampUs * 1_000L;
+
+        preparedFrame =
+                new PreparedFrame(
+                        image,
+                        info.frameNumber(),
+                        info.timestampUs(),
+                        logicalTimestampUs,
+                        targetTimeNs,
+                        System.nanoTime()
+                );
     }
 
     // This is called on a heart beat by the GUI thread. We want to be co-operative here by (a) not blocking, and (b)
@@ -546,7 +581,6 @@ public class VideoPlayerModel {
         }
 
         if (!pauseRequested &&
-                preparedFrame == null &&
                 !prepareNextFrameQueued) {
 
             prepareNextFrameQueued = true;
