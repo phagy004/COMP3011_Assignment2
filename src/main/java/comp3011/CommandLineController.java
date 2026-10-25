@@ -165,6 +165,13 @@ public class CommandLineController {
                 frameProcessors.add(
                         new FrameVignetter()
                 );
+                
+            } else if ("-d".equals(arg) ||
+                    "--dust-frames".equals(arg)) {
+
+                frameProcessors.add(
+                        new FrameDuster()
+                );
 
             } else if (arg.startsWith("-")) {
 
