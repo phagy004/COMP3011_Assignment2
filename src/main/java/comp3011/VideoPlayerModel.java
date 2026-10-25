@@ -44,6 +44,7 @@ public class VideoPlayerModel {
     private static final long AUDIO_LEAD_NS = 30_000_000L;
 
     private final List<FrameProcessor> frameProcessors;
+    private final FrameProcessingPipeline processingPipeline;
     private final Queue<PendingAudio> pendingAudio = new ArrayDeque<>();
     private final BiConsumer<Integer, Integer> videoSizeChangedHandler;
     private final Consumer<Image> frameReadyHandler;
@@ -105,6 +106,10 @@ public class VideoPlayerModel {
         this.playbackStateChangedHandler = playbackStateChangedHandler;
         this.audioOutputStateChangedHandler = audioOutputStateChangedHandler;
         this.frameProcessors = new ArrayList<>(frameProcessors);
+        this.processingPipeline =
+                new FrameProcessingPipeline(
+                        this.frameProcessors
+                );
     }
 
     public void play(File file) {
@@ -425,10 +430,11 @@ public class VideoPlayerModel {
             if (frame.image == null) {
                 continue;
             }
-
+            
+            
             if (!frameProcessorsInitialised) {
 
-                initialiseFrameProcessors(
+                processingPipeline.start(
                         new InfoVideo(
                                 mediaName(videoFile),
                                 totalVideoFrames,
@@ -472,13 +478,26 @@ public class VideoPlayerModel {
                             timestampUs
                     );
 
-            processFrame(
-                    frame,
+            //clone the frame because the grabber may reuse frame data
+            Frame frameCopy =
+                    frame.clone();
+
+            processingPipeline.submit(
+                    frameCopy,
                     info
             );
 
+            FrameProcessingPipeline.FrameJob job =
+                    processingPipeline.takeProcessedFrame();
+
+            if (job.getError() != null) {
+                throw job.getError();
+            }
+
             Image image =
-                    converter.convert(frame);
+                    converter.convert(
+                            job.getFrame()
+                    );
 
             long relativeTimestampUs =
                     Math.max(
@@ -728,8 +747,9 @@ public class VideoPlayerModel {
 
         audioAvailable = false;
 
-        frameProcessorsInitialised =
-                false;
+        frameProcessorsInitialised = false;
+        
+        processingPipeline.stop();
 
         if (audioPlayer != null) {
             audioPlayer.close();
