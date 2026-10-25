@@ -9,8 +9,13 @@ import org.bytedeco.javacv.Frame;
 
 public class FrameProcessingPipeline {
 
+    //one processor for each pipeline stage
     private final List<FrameProcessor> processors;
+
+    //each stage uses a queue to pass frames to the next stage
     private final List<BlockingQueue<FrameJob>> queues;
+
+    //each processor stage has its own worker thread
     private final List<Thread> workers;
 
     private volatile boolean running;
@@ -36,6 +41,7 @@ public class FrameProcessingPipeline {
             return;
         }
 
+        //initialise every processor before starting worker threads
         for (FrameProcessor processor :
                 processors) {
 
@@ -47,6 +53,7 @@ public class FrameProcessingPipeline {
         queues.clear();
         workers.clear();
 
+        //need one more queue than processors for the final output
         for (int i = 0;
                 i <= processors.size();
                 i++) {
@@ -58,6 +65,7 @@ public class FrameProcessingPipeline {
 
         running = true;
 
+        //start one worker thread for each processor
         for (int i = 0;
                 i < processors.size();
                 i++) {
@@ -93,6 +101,7 @@ public class FrameProcessingPipeline {
             );
         }
 
+        //send a new frame into the first stage
         queues.get(0).put(
                 new FrameJob(
                         frame,
@@ -114,13 +123,14 @@ public class FrameProcessingPipeline {
                 .get(queues.size() - 1)
                 .take();
     }
-    
+
     public FrameJob pollProcessedFrame() {
 
         if (!running) {
             return null;
         }
 
+        //do not block the JavaFX thread while waiting for output
         return queues
                 .get(queues.size() - 1)
                 .poll();
@@ -130,12 +140,14 @@ public class FrameProcessingPipeline {
 
         running = false;
 
+        //tell all worker threads to stop
         for (Thread worker :
                 workers) {
 
             worker.interrupt();
         }
 
+        //wait until workers have fully stopped
         for (Thread worker :
                 workers) {
 
@@ -172,6 +184,7 @@ public class FrameProcessingPipeline {
 
             try {
 
+                //wait for the next frame from the previous stage
                 FrameJob job =
                         inputQueue.take();
 
@@ -179,6 +192,7 @@ public class FrameProcessingPipeline {
 
                     try {
 
+                        //process the frame only if an earlier stage did not fail
                         processor.process(
                                 job.getFrame(),
                                 job.getInfo()
@@ -190,6 +204,7 @@ public class FrameProcessingPipeline {
                     }
                 }
 
+                //pass the frame to the next pipeline stage
                 outputQueue.put(job);
 
             } catch (InterruptedException e) {
@@ -218,17 +233,14 @@ public class FrameProcessingPipeline {
         }
 
         public Frame getFrame() {
-
             return frame;
         }
 
         public InfoFrame getInfo() {
-
             return info;
         }
 
         public Exception getError() {
-
             return error;
         }
 
