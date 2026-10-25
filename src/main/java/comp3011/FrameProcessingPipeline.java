@@ -13,7 +13,7 @@ public class FrameProcessingPipeline {
     private final List<BlockingQueue<FrameJob>> queues;
     private final List<Thread> workers;
 
-    private boolean running;
+    private volatile boolean running;
 
     public FrameProcessingPipeline(
             List<FrameProcessor> processors) {
@@ -113,6 +113,17 @@ public class FrameProcessingPipeline {
         return queues
                 .get(queues.size() - 1)
                 .take();
+    }
+    
+    public FrameJob pollProcessedFrame() {
+
+        if (!running) {
+            return null;
+        }
+
+        return queues
+                .get(queues.size() - 1)
+                .poll();
     }
 
     public void stop() {
