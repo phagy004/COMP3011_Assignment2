@@ -172,6 +172,13 @@ public class CommandLineController {
                 frameProcessors.add(
                         new FrameDuster()
                 );
+                
+            } else if ("-j".equals(arg) ||
+                    "--jitter-frames".equals(arg)) {
+
+                frameProcessors.add(
+                        new FrameJitterer()
+                );
 
             } else if (arg.startsWith("-")) {
 
