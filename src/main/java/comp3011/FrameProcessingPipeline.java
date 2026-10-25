@@ -136,6 +136,22 @@ public class FrameProcessingPipeline {
             worker.interrupt();
         }
 
+        for (Thread worker :
+                workers) {
+
+            try {
+
+                worker.join();
+
+            } catch (InterruptedException e) {
+
+                Thread.currentThread()
+                        .interrupt();
+
+                break;
+            }
+        }
+
         workers.clear();
         queues.clear();
     }
