@@ -193,6 +193,13 @@ public class CommandLineController {
                 frameProcessors.add(
                         new FrameBleeder()
                 );
+                
+            } else if ("-p".equals(arg) ||
+                    "--pepper-frames".equals(arg)) {
+
+                frameProcessors.add(
+                        new FramePepperer()
+                );
 
             } else if (arg.startsWith("-")) {
 
