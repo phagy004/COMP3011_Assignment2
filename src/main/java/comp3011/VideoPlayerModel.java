@@ -596,8 +596,8 @@ public class VideoPlayerModel {
         }
     }
 
-    private void displayPreparedFrame(
-            long now) {
+    private void displayPreparedFrame(long now) {
+    	
 
         PreparedFrame frame =
                 preparedFrame;
@@ -889,34 +889,6 @@ public class VideoPlayerModel {
                 0,
                 durationUs - frameDurationUs
         );
-    }
-
-    private void processFrame(
-            Frame frame,
-            InfoFrame info)
-            throws Exception {
-
-        for (FrameProcessor processor :
-                frameProcessors) {
-
-            processor.process(
-                    frame,
-                    info
-            );
-        }
-    }
-
-    private void initialiseFrameProcessors(
-            InfoVideo videoInfo)
-            throws Exception {
-
-        for (FrameProcessor processor :
-                frameProcessors) {
-
-            processor.initialise(
-                    videoInfo
-            );
-        }
     }
 
     private Frame grabFrame()
