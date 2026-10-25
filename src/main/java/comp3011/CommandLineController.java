@@ -179,6 +179,13 @@ public class CommandLineController {
                 frameProcessors.add(
                         new FrameJitterer()
                 );
+                
+            } else if ("-m".equals(arg) ||
+                    "--mottle-frames".equals(arg)) {
+
+                frameProcessors.add(
+                        new FrameMottler()
+                );
 
             } else if (arg.startsWith("-")) {
 
