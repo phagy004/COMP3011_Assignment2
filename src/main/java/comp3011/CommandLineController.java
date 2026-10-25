@@ -186,6 +186,13 @@ public class CommandLineController {
                 frameProcessors.add(
                         new FrameMottler()
                 );
+                
+            } else if ("-b".equals(arg) ||
+                    "--bleed-frames".equals(arg)) {
+
+                frameProcessors.add(
+                        new FrameBleeder()
+                );
 
             } else if (arg.startsWith("-")) {
 
