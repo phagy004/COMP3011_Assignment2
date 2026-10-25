@@ -144,12 +144,21 @@ public class CommandLineController {
                 frameProcessors.add(
                         new FrameFlickerer()
                 );
+                
             } else if ("-w".equals(arg) ||
                     "--black-and-white".equals(arg)) {
 
                 frameProcessors.add(
                         new FrameBlackAndWhiter()
                 );
+                
+            } else if ("-y".equals(arg) ||
+                    "--yellow-frames".equals(arg)) {
+
+                frameProcessors.add(
+                        new FrameYellower()
+                );
+                
 
             } else if (arg.startsWith("-")) {
 
