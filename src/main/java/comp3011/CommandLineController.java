@@ -131,6 +131,12 @@ public class CommandLineController {
                 frameProcessors.add(
                         new FrameNumberer()
                 );
+            } else if ("-s".equals(arg) ||
+                    "--scratch-frames".equals(arg)) {
+
+                frameProcessors.add(
+                        new FrameScratcher()
+                );   
 
             } else if (arg.startsWith("-")) {
 
