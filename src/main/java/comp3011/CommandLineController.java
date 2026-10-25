@@ -4,7 +4,7 @@
  * 
  * Authors:
  *   1. Simon Ratcliffe, in collaboration with GPT-5.6 Terra
- *   2. <student name and student number insert here upon modification>
+ *   2. Gia Minh Pham - student id: a3145117
  *
  * Copyright 2026 Simon Ratcliffe
  */
@@ -24,7 +24,6 @@ import java.util.List;
  * </p>
  */
 public class CommandLineController {
-
     private final String[] args;
 
     private boolean helpRequested;
@@ -34,12 +33,12 @@ public class CommandLineController {
     private File videoFile;
     private String errorMessage;
 
+    //stores frame processors in the same order as the command line
     private final List<FrameProcessor> frameProcessors =
             new ArrayList<>();
 
     public CommandLineController(String[] args) {
         this.args = args.clone();
-
         parse();
 
         if (errorMessage != null) {
@@ -75,19 +74,17 @@ public class CommandLineController {
         return maximiseRequested;
     }
 
+    //lets the video player use the processors selected from the command line
     public List<FrameProcessor> getFrameProcessors() {
         return frameProcessors;
     }
 
     public boolean shouldLaunchApplication() {
-        return errorMessage == null &&
-                videoFile != null;
+        return errorMessage == null && videoFile != null;
     }
 
     private void parse() {
-
-        List<String> videoFiles =
-                new ArrayList<>();
+        List<String> videoFiles = new ArrayList<>();
 
         for (String arg : args) {
 
@@ -171,15 +168,15 @@ public class CommandLineController {
 
                 addFrameProcessor('p');
 
+            //try stacked options such as -jfddn
             } else if (parseStackedFrameProcessors(arg)) {
 
-                //stacked frame processors were added
+                //stacked processors were added
 
             } else if (arg.startsWith("-")) {
 
                 errorMessage =
-                        "Unknown option: "
-                        + arg;
+                        "Unknown option: " + arg;
 
             } else {
 
@@ -195,7 +192,9 @@ public class CommandLineController {
         } else if (videoFiles.size() == 1) {
 
             videoFile =
-                    new File(videoFiles.get(0));
+                    new File(
+                            videoFiles.get(0)
+                    );
 
             if (!videoFile.isFile()) {
 
@@ -216,7 +215,9 @@ public class CommandLineController {
         }
     }
 
-    private boolean parseStackedFrameProcessors(String arg) {
+    //checks if an option contains multiple frame processor letters
+    private boolean parseStackedFrameProcessors(
+            String arg) {
 
         if (!arg.startsWith("-") ||
                 arg.startsWith("--") ||
@@ -225,31 +226,41 @@ public class CommandLineController {
             return false;
         }
 
+        String options =
+                arg.substring(1);
+
         String validOptions =
                 "nsfwyvdjmbp";
 
-        for (int i = 1; i < arg.length(); i++) {
+        //check all letters before adding anything
+        for (int i = 0;
+                i < options.length();
+                i++) {
 
-            char option =
-                    arg.charAt(i);
-
-            if (validOptions.indexOf(option) == -1) {
+            if (validOptions.indexOf(
+                    options.charAt(i)
+            ) < 0) {
 
                 return false;
             }
         }
 
-        for (int i = 1; i < arg.length(); i++) {
+        //add processors from left to right to keep command line order
+        for (int i = 0;
+                i < options.length();
+                i++) {
 
             addFrameProcessor(
-                    arg.charAt(i)
+                    options.charAt(i)
             );
         }
 
         return true;
     }
 
-    private void addFrameProcessor(char option) {
+    //creates the correct processor for a short option
+    private void addFrameProcessor(
+            char option) {
 
         switch (option) {
 
@@ -325,7 +336,6 @@ public class CommandLineController {
     }
 
     private void setDisplayId(int displayId) {
-
         if (this.displayId != null &&
                 this.displayId != displayId) {
 
@@ -335,91 +345,37 @@ public class CommandLineController {
             return;
         }
 
-        this.displayId =
-                displayId;
+        this.displayId = displayId;
     }
 
     private void printHelp() {
-
         System.out.println(
                 "Usage: VideoPlayer [options] [video-file]"
         );
 
         System.out.println();
 
-        System.out.println(
-                "Options:"
-        );
-
-        System.out.println(
-                "  -h, --help         Show this help message"
-        );
-
-        System.out.println(
-                "  -a, --audio        Play audio"
-        );
-
-        System.out.println(
-                "  -x, --maximise     Open the player maximised"
-        );
-
-        System.out.println(
-                "  -1, --monitor-1    Open the player on display 1"
-        );
-
-        System.out.println(
-                "  -2, --monitor-2    Open the player on display 2"
-        );
+        System.out.println("Options:");
+        System.out.println("  -h, --help         Show this help message");
+        System.out.println("  -a, --audio        Play audio");
+        System.out.println("  -x, --maximise     Open the player maximised");
+        System.out.println("  -1, --monitor-1    Open the player on display 1");
+        System.out.println("  -2, --monitor-2    Open the player on display 2");
 
         System.out.println();
 
-        System.out.println(
-                "Frame processors:"
-        );
-
-        System.out.println(
-                "  -n, --number-frames    Render the frame number onto each frame"
-        );
-
-        System.out.println(
-                "  -s, --scratch-frames   Render vertical film scratches"
-        );
-
-        System.out.println(
-                "  -f, --flicker-frames   Randomly dim frames"
-        );
-
-        System.out.println(
-                "  -w, --black-and-white  Convert frames to black and white"
-        );
-
-        System.out.println(
-                "  -y, --yellow-frames    Apply a warmer colour temperature"
-        );
-
-        System.out.println(
-                "  -v, --vignette-frames  Darken the frame edges"
-        );
-
-        System.out.println(
-                "  -d, --dust-frames      Render dust and hair marks"
-        );
-
-        System.out.println(
-                "  -j, --jitter-frames    Randomly displace frames by a few pixels"
-        );
-
-        System.out.println(
-                "  -m, --mottle-frames    Add cloudy emulsion mottling"
-        );
-
-        System.out.println(
-                "  -b, --bleed-frames     Bleed light into frames"
-        );
-
-        System.out.println(
-                "  -p, --pepper-frames    Pepper frames with dark spots/blotches"
-        );
+        System.out.println("Frame processors:");
+        System.out.println("  -n, --number-frames    Render the frame number onto each frame");
+        System.out.println("  -s, --scratch-frames   Render vertical film scratches");
+        System.out.println("  -f, --flicker-frames   Randomly dim frames");
+        System.out.println("  -w, --black-and-white  Convert frames to black and white");
+        System.out.println("  -y, --yellow-frames    Apply a warmer colour temperature");
+        System.out.println("  -v, --vignette-frames  Darken the frame edges");
+        System.out.println("  -d, --dust-frames      Render dust and hair marks");
+        System.out.println("  -j, --jitter-frames    Randomly displace frames by a few pixels");
+        System.out.println("  -m, --mottle-frames    Add cloudy emulsion mottling");
+        System.out.println("  -b, --bleed-frames     Bleed light into frames");
+        System.out.println("  -p, --pepper-frames    Pepper frames with dark spots/blotches");
 
         System.out.println();
 
